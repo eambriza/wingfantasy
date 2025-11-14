@@ -1,5 +1,6 @@
 import React, { useEffect, useState, createContext, useContext } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import TabBar from './components/TabBar';
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -655,21 +656,37 @@ function generateDemoLeaderboards(seed: number, users: UserProfile[]): Leaderboa
   sports.forEach(sport => {
     weeks.forEach(week => {
       const key = `${sport}:${week}`;
-      weeklySportBoards[key] = users.map(user => ({
+      const entries = users.map(user => ({
         userId: user.userId,
         name: user.name,
         country: user.country,
         points: Math.floor(rng() * 150) + 20
-      })).sort((a, b) => b.points - a.points);
+      }));
+      // Add Eric Ambriza with points to place in top 10-15
+      entries.push({
+        userId: 'user_eric_ambriza',
+        name: 'Eric Ambriza',
+        country: 'ZA',
+        points: Math.floor(rng() * 30) + 130 // 130-160 points (top 10-15 range)
+      });
+      weeklySportBoards[key] = entries.sort((a, b) => b.points - a.points);
     });
     months.forEach(month => {
       const key = `${sport}:${month}`;
-      monthlySportBoards[key] = users.map(user => ({
+      const entries = users.map(user => ({
         userId: user.userId,
         name: user.name,
         country: user.country,
         points: Math.floor(rng() * 600) + 100
-      })).sort((a, b) => b.points - a.points);
+      }));
+      // Add Eric Ambriza with points to place in top 10-15
+      entries.push({
+        userId: 'user_eric_ambriza',
+        name: 'Eric Ambriza',
+        country: 'ZA',
+        points: Math.floor(rng() * 100) + 550 // 550-650 points (top 10-15 range)
+      });
+      monthlySportBoards[key] = entries.sort((a, b) => b.points - a.points);
     });
   });
   users.forEach(user => {
@@ -679,6 +696,13 @@ function generateDemoLeaderboards(seed: number, users: UserProfile[]): Leaderboa
       country: user.country,
       points: Math.floor(rng() * 2000) + 500
     });
+  });
+  // Add Eric Ambriza to global season board
+  globalSeasonBoard.push({
+    userId: 'user_eric_ambriza',
+    name: 'Eric Ambriza',
+    country: 'ZA',
+    points: Math.floor(rng() * 400) + 2000 // 2000-2400 points (top 10-15 range)
   });
   globalSeasonBoard.sort((a, b) => b.points - a.points);
   return {
@@ -794,10 +818,10 @@ export function App() {
     }
   });
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    userId: 'user_' + Math.random().toString(36).substr(2, 9),
-    name: 'Player',
+    userId: 'user_eric_ambriza',
+    name: 'Eric Ambriza',
     country: 'ZA',
-    handle: '@player'
+    handle: '@ericambriza'
   });
   const [leaderboards, setLeaderboards] = useState<LeaderboardData>({
     weeklySportBoards: {},
@@ -1128,7 +1152,7 @@ export function App() {
     updateLeaderboardFilters
   }}>
       <Router>
-        <div className="bg-[#0b121f] min-h-screen text-white">
+        <div className="rb-bg min-h-screen text-rb-text font-ui">
           <Routes>
             <Route path="/" element={<MainLayout />}>
               <Route index element={<HomeScreen />} />
@@ -1148,7 +1172,8 @@ export function App() {
 // MAIN LAYOUT
 // ============================================================================
 function MainLayout() {
-  return <div className="flex flex-col h-screen">
+  return (
+    <div className="flex flex-col h-screen">
       <div className="flex-1 overflow-auto">
         <Routes>
           <Route index element={<HomeScreen />} />
@@ -1158,42 +1183,12 @@ function MainLayout() {
           <Route path="fantasy" element={<FantasyScreen />} />
           <Route path="boards" element={<BoardsScreen />} />
         </Routes>
+        {/* Bottom spacer to prevent content from being hidden under tab bar */}
+        <div className="h-[84px]" />
       </div>
-      <nav className="bg-[#0b121f] border-t border-[#1a2334] h-16 flex items-center">
-        <div className="w-full flex justify-around">
-          <Link to="/" className="text-center px-2">
-            <div className="flex flex-col items-center">
-              <span className="text-2xl">⌂</span>
-              <span className="text-xs mt-1">Home</span>
-            </div>
-          </Link>
-          <Link to="/events" className="text-center px-2">
-            <div className="flex flex-col items-center">
-              <span className="text-2xl">☰</span>
-              <span className="text-xs mt-1">Events</span>
-            </div>
-          </Link>
-          <Link to="/fantasy" className="text-center px-2">
-            <div className="flex flex-col items-center">
-              <span className="text-2xl">⚽</span>
-              <span className="text-xs mt-1">Fantasy</span>
-            </div>
-          </Link>
-          <Link to="/boards" className="text-center px-2">
-            <div className="flex flex-col items-center">
-              <span className="text-2xl">🏆</span>
-              <span className="text-xs mt-1">Boards</span>
-            </div>
-          </Link>
-          <Link to="/search" className="text-center px-2">
-            <div className="flex flex-col items-center">
-              <span className="text-2xl">🔍</span>
-              <span className="text-xs mt-1">Search</span>
-            </div>
-          </Link>
-        </div>
-      </nav>
-    </div>;
+      <TabBar />
+    </div>
+  );
 }
 // ============================================================================
 // FANTASY SCREEN
@@ -1218,10 +1213,42 @@ function FantasyScreen() {
   }, 0);
   const locked = state.weeklySlate ? isLocked(state.weeklySlate.lockISO) : false;
   const openPicker = (mode: 'football' | 'f1', slot: string) => {
-    if (locked) return;
+    console.log('openPicker called:', { mode, slot, locked });
+    alert(`Opening picker for ${mode} - ${slot}. Locked: ${locked}`);
+    if (locked) {
+      console.log('Squad is locked, cannot open picker');
+      alert('Squad is locked!');
+      return;
+    }
     setPickerMode(mode);
     setPickerSlot(slot);
     setShowPicker(true);
+    console.log('Picker should now be visible. showPicker state:', true);
+  };
+  
+  const removePlayer = () => {
+    const newSquad = {
+      ...state.fantasySquad
+    };
+    if (pickerMode === 'football') {
+      newSquad.football = {
+        ...newSquad.football,
+        [pickerSlot]: undefined
+      };
+      if (newSquad.football.captainId === state.fantasySquad.football[pickerSlot as keyof typeof state.fantasySquad.football]) {
+        newSquad.football.captainId = undefined;
+      }
+    } else {
+      newSquad.f1 = {
+        ...newSquad.f1,
+        [pickerSlot]: undefined
+      };
+      if (newSquad.f1.captainId === state.fantasySquad.f1[pickerSlot as keyof typeof state.fantasySquad.f1]) {
+        newSquad.f1.captainId = undefined;
+      }
+    }
+    updateFantasySquad(newSquad);
+    setShowPicker(false);
   };
   const selectPlayer = (id: string) => {
     const newSquad = {
@@ -1252,167 +1279,308 @@ function FantasyScreen() {
     }
     updateFantasySquad(newSquad);
   };
+  
+  const simulateSquad = () => {
+    const newSquad = {
+      football: {
+        FWD: FOOTBALL_PLAYERS.find(p => p.role === 'FWD')?.id,
+        MID: FOOTBALL_PLAYERS.find(p => p.role === 'MID')?.id,
+        DEF: FOOTBALL_PLAYERS.find(p => p.role === 'DEF')?.id,
+        FLEX: FOOTBALL_PLAYERS.find(p => p.role === 'FWD' && p.id !== FOOTBALL_PLAYERS.find(p => p.role === 'FWD')?.id)?.id || FOOTBALL_PLAYERS[3]?.id,
+        captainId: FOOTBALL_PLAYERS.find(p => p.role === 'FWD')?.id
+      },
+      f1: {
+        driver1: F1_DRIVERS[0]?.id,
+        driver2: F1_DRIVERS[1]?.id,
+        team: F1_TEAMS[0]?.id,
+        captainId: F1_DRIVERS[0]?.id
+      }
+    };
+    updateFantasySquad(newSquad);
+  };
+  
   const lockTime = state.weeklySlate ? new Date(state.weeklySlate.lockISO) : null;
   const timeToLock = lockTime ? Math.max(0, lockTime.getTime() - Date.now()) : 0;
   const hoursToLock = Math.floor(timeToLock / (1000 * 60 * 60));
   const minutesToLock = Math.floor(timeToLock % (1000 * 60 * 60) / (1000 * 60));
-  return <div className="bg-[#0b121f] min-h-screen pb-20">
-      <div className="p-4">
-        <h1 className="text-2xl font-bold text-white mb-2">FANTASY SQUAD</h1>
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <p className="text-[#9ca3af] text-sm">
-              Week: {state.weeklySlate?.weekId || 'N/A'}
-            </p>
-            {!locked && <p className="text-[#e50914] text-sm font-bold">
-                Lock in: {hoursToLock}h {minutesToLock}m
-              </p>}
-            {locked && <p className="text-[#e50914] text-sm font-bold">LOCKED</p>}
-          </div>
-          <button onClick={() => navigate('/leaderboards')} className="bg-[#2a3448] px-4 py-2 rounded text-white text-sm">
-            Leaderboards
-          </button>
-        </div>
-      </div>
-      {/* Football Squad */}
-      <div className="mx-4 mb-4 bg-[#192237] rounded-lg p-4">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-white font-bold">FOOTBALL</h2>
-          <p className="text-[#9ca3af] text-sm">
-            {footballCost}/{FOOTBALL_SALARY_CAP}
-          </p>
-        </div>
-        {(['FWD', 'MID', 'DEF', 'FLEX'] as const).map(slot => {
-        const playerId = state.fantasySquad.football[slot];
-        const player = playerId ? FOOTBALL_PLAYERS.find(p => p.id === playerId) : null;
-        const isCaptain = playerId === state.fantasySquad.football.captainId;
-        return <div key={slot} className="mb-2 flex items-center">
-              <div className="flex-1">
-                <p className="text-[#9ca3af] text-xs mb-1">{slot}</p>
-                {player ? <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-white text-sm font-bold">
-                        {player.name}
-                      </p>
-                      <p className="text-[#9ca3af] text-xs">
-                        {player.club} • ${player.cost}
-                      </p>
-                    </div>
-                    {!locked && <div className="flex gap-2">
-                        <button onClick={() => setCaptain('football', playerId)} className={`px-2 py-1 rounded text-xs ${isCaptain ? 'bg-[#e50914] text-white' : 'bg-[#2a3448] text-[#9ca3af]'}`}>
-                          C
-                        </button>
-                        <button onClick={() => openPicker('football', slot)} className="bg-[#2a3448] px-2 py-1 rounded text-white text-xs">
-                          Change
-                        </button>
-                      </div>}
-                  </div> : <button onClick={() => openPicker('football', slot)} disabled={locked} className="bg-[#2a3448] px-3 py-2 rounded text-white text-sm w-full disabled:opacity-50">
-                    + Add Player
-                  </button>}
-              </div>
-            </div>;
-      })}
-      </div>
-      {/* F1 Squad */}
-      <div className="mx-4 mb-4 bg-[#192237] rounded-lg p-4">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-white font-bold">FORMULA 1</h2>
-          <p className="text-[#9ca3af] text-sm">
-            {f1Cost}/{F1_SALARY_CAP}
-          </p>
-        </div>
-        {(['driver1', 'driver2'] as const).map(slot => {
-        const driverId = state.fantasySquad.f1[slot];
-        const driver = driverId ? F1_DRIVERS.find(d => d.id === driverId) : null;
-        const isCaptain = driverId === state.fantasySquad.f1.captainId;
-        return <div key={slot} className="mb-2">
-              <p className="text-[#9ca3af] text-xs mb-1">
-                {slot === 'driver1' ? 'DRIVER 1' : 'DRIVER 2'}
-              </p>
-              {driver ? <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-white text-sm font-bold">
-                      {driver.name}
-                    </p>
-                    <p className="text-[#9ca3af] text-xs">
-                      {driver.team} • ${driver.cost}
-                    </p>
-                  </div>
-                  {!locked && <div className="flex gap-2">
-                      <button onClick={() => setCaptain('f1', driverId)} className={`px-2 py-1 rounded text-xs ${isCaptain ? 'bg-[#e50914] text-white' : 'bg-[#2a3448] text-[#9ca3af]'}`}>
-                        C
-                      </button>
-                      <button onClick={() => openPicker('f1', slot)} className="bg-[#2a3448] px-2 py-1 rounded text-white text-xs">
-                        Change
-                      </button>
-                    </div>}
-                </div> : <button onClick={() => openPicker('f1', slot)} disabled={locked} className="bg-[#2a3448] px-3 py-2 rounded text-white text-sm w-full disabled:opacity-50">
-                  + Add Driver
-                </button>}
-            </div>;
-      })}
-        <div className="mb-2">
-          <p className="text-[#9ca3af] text-xs mb-1">TEAM</p>
-          {state.fantasySquad.f1.team ? <div className="flex items-center justify-between">
+  return <div className="min-h-screen fade-in">
+      <div className="container mx-auto max-w-[432px]">
+        <div className="p-4">
+          <h1 className="text-3xl font-semibold tracking-tight text-rb-text mb-2">FANTASY SQUAD</h1>
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-3">
               <div>
-                <p className="text-white text-sm font-bold">
-                  {F1_TEAMS.find(t => t.id === state.fantasySquad.f1.team)?.name}
+                <p className="text-rb-subtext text-sm">
+                  Week: {state.weeklySlate?.weekId || 'N/A'}
                 </p>
-                <p className="text-[#9ca3af] text-xs">
-                  $
-                  {F1_TEAMS.find(t => t.id === state.fantasySquad.f1.team)?.cost}
-                </p>
+                {!locked && <p className="text-white text-sm font-semibold">
+                    Lock in: {hoursToLock}h {minutesToLock}m
+                  </p>}
+                {locked && <p className="text-white text-sm font-semibold">LOCKED</p>}
               </div>
-              {!locked && <button onClick={() => openPicker('f1', 'team')} className="bg-[#2a3448] px-2 py-1 rounded text-white text-xs">
-                  Change
-                </button>}
-            </div> : <button onClick={() => openPicker('f1', 'team')} disabled={locked} className="bg-[#2a3448] px-3 py-2 rounded text-white text-sm w-full disabled:opacity-50">
-              + Add Team
-            </button>}
-        </div>
-      </div>
-      {/* Dev Panel */}
-      <DevPanel />
-      {/* Player Picker Modal */}
-      {showPicker && <div className="fixed inset-0 bg-black bg-opacity-75 flex items-end z-50">
-          <div className="bg-[#192237] w-full rounded-t-lg max-h-[70vh] overflow-auto">
-            <div className="p-4 border-b border-[#2a3448] flex justify-between items-center">
-              <h3 className="text-white font-bold">
-                {pickerMode === 'football' ? 'Select Player' : 'Select Driver/Team'}
-              </h3>
-              <button onClick={() => setShowPicker(false)} className="text-white text-2xl">
-                ×
+              <button 
+                onClick={() => navigate('/boards')} 
+                className="h-12 px-5 rounded-full bg-rb-pill text-rb-text font-semiboldborder-rb-line active:scale-[0.98] transition"
+              >
+                Leaderboards
               </button>
             </div>
-            <div className="p-4">
-              {pickerMode === 'football' && <div>
-                  {FOOTBALL_PLAYERS.filter(p => {
-              if (pickerSlot === 'FLEX') return true;
-              return p.role === pickerSlot;
-            }).map(player => <button key={player.id} onClick={() => selectPlayer(player.id)} className="w-full bg-[#2a3448] p-3 rounded mb-2 text-left">
-                      <p className="text-white font-bold">{player.name}</p>
-                      <p className="text-[#9ca3af] text-sm">
-                        {player.role} • {player.club} • ${player.cost}
+            {!locked && (
+              <button 
+                onClick={simulateSquad} 
+                className="w-full h-12 px-5 rounded-full bg-rb-red text-white font-semibold shadow-soft active:scale-[0.98] transition"
+              >
+                Auto-Fill Squad (Simulate)
+              </button>
+            )}
+          </div>
+        </div>
+        {/* Football Squad */}
+        <div className="mx-4 mb-4 rb-card rounded-2xl shadow-cardborder-rb-line p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-base font-semibold text-rb-text">Football Squad</h2>
+            <p className={`text-sm ${footballCost > FOOTBALL_SALARY_CAP ? 'text-[#FFB4B4]' : 'text-rb-subtext'}`}>
+              Used {footballCost} / {FOOTBALL_SALARY_CAP}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {(['FWD', 'MID', 'DEF', 'FLEX'] as const).map(slot => {
+              const playerId = state.fantasySquad.football[slot];
+              const player = playerId ? FOOTBALL_PLAYERS.find(p => p.id === playerId) : null;
+              const isCaptain = playerId === state.fantasySquad.football.captainId;
+              
+              return (
+                <div key={slot} className="rb-card rounded-xlborder-rb-line p-3">
+                  <p className="text-rb-muted text-xs mb-2">{slot}</p>
+                  {player ? (
+                    <div 
+                      onClick={() => !locked && openPicker('football', slot)}
+                      className={!locked ? "cursor-pointer hover:bg-white/5 -m-3 p-3 rounded-xl transition" : ""}
+                    >
+                      <p className="text-rb-text text-sm font-semibold mb-1">
+                        {player.name}
                       </p>
-                    </button>)}
-                </div>}
-              {pickerMode === 'f1' && pickerSlot !== 'team' && <div>
-                  {F1_DRIVERS.map(driver => <button key={driver.id} onClick={() => selectPlayer(driver.id)} className="w-full bg-[#2a3448] p-3 rounded mb-2 text-left">
-                      <p className="text-white font-bold">{driver.name}</p>
-                      <p className="text-[#9ca3af] text-sm">
-                        {driver.team} • ${driver.cost}
+                      <div className="inline-block px-2 py-0.5 rounded bg-rb-pill text-rb-subtext text-xs mb-1">
+                        {player.role}
+                      </div>
+                      <p className="text-rb-muted text-xs mb-2">
+                        ${player.cost}
                       </p>
-                    </button>)}
-                </div>}
-              {pickerMode === 'f1' && pickerSlot === 'team' && <div>
-                  {F1_TEAMS.map(team => <button key={team.id} onClick={() => selectPlayer(team.id)} className="w-full bg-[#2a3448] p-3 rounded mb-2 text-left">
-                      <p className="text-white font-bold">{team.name}</p>
-                      <p className="text-[#9ca3af] text-sm">${team.cost}</p>
-                    </button>)}
-                </div>}
+                      {!locked && playerId && (
+                        <div className="flex gap-1">
+                          {!isCaptain && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCaptain('football', playerId);
+                              }} 
+                              className="text-xs px-2 py-1 rounded bg-rb-pill text-rb-subtextborder-rb-line"
+                            >
+                              Set Captain
+                            </button>
+                          )}
+                          {isCaptain && (
+                            <div className="text-xs px-2 py-1 rounded bg-rb-red text-white font-semibold">
+                              Captain
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => openPicker('football', slot)} 
+                      disabled={locked} 
+                      className="w-full h-20 border-2 border-dashed border-rb-line rounded-lg flex items-center justify-center text-rb-muted disabled:opacity-50"
+                    >
+                      <span className="text-2xl">+</span>
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        {/* F1 Squad */}
+        <div className="mx-4 mb-4 rb-card rounded-2xl shadow-cardborder-rb-line p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-base font-semibold text-rb-text">F1 Squad</h2>
+            <p className={`text-sm ${f1Cost > F1_SALARY_CAP ? 'text-[#FFB4B4]' : 'text-rb-subtext'}`}>
+              Used {f1Cost} / {F1_SALARY_CAP}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {(['driver1', 'driver2'] as const).map(slot => {
+              const driverId = state.fantasySquad.f1[slot];
+              const driver = driverId ? F1_DRIVERS.find(d => d.id === driverId) : null;
+              const isCaptain = driverId === state.fantasySquad.f1.captainId;
+              
+              return (
+                <div key={slot} className="rb-card rounded-xlborder-rb-line p-3">
+                  <p className="text-rb-muted text-xs mb-2">
+                    {slot === 'driver1' ? 'DRIVER 1' : 'DRIVER 2'}
+                  </p>
+                  {driver ? (
+                    <div 
+                      onClick={() => !locked && openPicker('f1', slot)}
+                      className={!locked ? "cursor-pointer hover:bg-white/5 -m-3 p-3 rounded-xl transition" : ""}
+                    >
+                      <p className="text-rb-text text-sm font-semibold mb-1">
+                        {driver.name}
+                      </p>
+                      <p className="text-rb-muted text-xs mb-2">
+                        ${driver.cost}
+                      </p>
+                      {!locked && driverId && (
+                        <div className="flex gap-1">
+                          {!isCaptain && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCaptain('f1', driverId);
+                              }} 
+                              className="text-xs px-2 py-1 rounded bg-rb-pill text-rb-subtextborder-rb-line"
+                            >
+                              Set Captain
+                            </button>
+                          )}
+                          {isCaptain && (
+                            <div className="text-xs px-2 py-1 rounded bg-rb-red text-white font-semibold">
+                              Captain
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => openPicker('f1', slot)} 
+                      disabled={locked} 
+                      className="w-full h-20 border-2 border-dashed border-rb-line rounded-lg flex items-center justify-center text-rb-muted disabled:opacity-50"
+                    >
+                      <span className="text-2xl">+</span>
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            <div className="rb-card rounded-xlborder-rb-line p-3 col-span-2">
+              <p className="text-rb-muted text-xs mb-2">TEAM</p>
+              {state.fantasySquad.f1.team ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-rb-text text-sm font-semibold">
+                      {F1_TEAMS.find(t => t.id === state.fantasySquad.f1.team)?.name}
+                    </p>
+                    <p className="text-rb-muted text-xs">
+                      ${F1_TEAMS.find(t => t.id === state.fantasySquad.f1.team)?.cost}
+                    </p>
+                  </div>
+                  {!locked && (
+                    <button 
+                      onClick={() => openPicker('f1', 'team')} 
+                      className="text-xs px-3 py-1 rounded bg-rb-pill text-rb-subtextborder-rb-line"
+                    >
+                      Change
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button 
+                  onClick={() => openPicker('f1', 'team')} 
+                  disabled={locked} 
+                  className="w-full h-20 border-2 border-dashed border-rb-line rounded-lg flex items-center justify-center text-rb-muted disabled:opacity-50"
+                >
+                  <span className="text-2xl">+</span>
+                </button>
+              )}
             </div>
           </div>
-        </div>}
+        </div>
+        {/* Dev Panel */}
+        <DevPanel />
+        
+        {/* Player Picker Modal */}
+        {showPicker && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end z-50">
+            <div className="rb-card w-full rounded-t-2xl max-h-[70vh] overflow-auto border-t border-rb-line">
+              <div className="p-4 border-b border-rb-line flex justify-between items-center sticky top-0 glass-header">
+                <h3 className="text-rb-text font-semibold">
+                  {pickerMode === 'football' ? 'Select Player' : 'Select Driver/Team'}
+                </h3>
+                <button 
+                  onClick={() => setShowPicker(false)} 
+                  className="text-rb-text text-2xl w-10 h-10 flex items-center justify-center"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="p-4">
+                {/* Show Remove button if slot is filled */}
+                {((pickerMode === 'football' && state.fantasySquad.football[pickerSlot as keyof typeof state.fantasySquad.football]) ||
+                  (pickerMode === 'f1' && state.fantasySquad.f1[pickerSlot as keyof typeof state.fantasySquad.f1])) && (
+                  <button 
+                    onClick={removePlayer} 
+                    className="w-full mb-4 h-12 px-5 rounded-full bg-red-600 text-white font-semibold active:scale-[0.98] transition"
+                  >
+                    Remove Player
+                  </button>
+                )}
+                
+                {pickerMode === 'football' && (
+                  <div className="space-y-2">
+                    {FOOTBALL_PLAYERS.filter(p => {
+                      if (pickerSlot === 'FLEX') return true;
+                      return p.role === pickerSlot;
+                    }).map(player => (
+                      <button 
+                        key={player.id} 
+                        onClick={() => selectPlayer(player.id)} 
+                        className="w-full rb-cardborder-rb-line p-4 rounded-xl text-left active:scale-[0.98] transition"
+                      >
+                        <p className="text-rb-text font-semibold mb-1">{player.name}</p>
+                        <p className="text-rb-subtext text-sm">
+                          {player.role} • {player.club} • ${player.cost}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {pickerMode === 'f1' && pickerSlot !== 'team' && (
+                  <div className="space-y-2">
+                    {F1_DRIVERS.map(driver => (
+                      <button 
+                        key={driver.id} 
+                        onClick={() => selectPlayer(driver.id)} 
+                        className="w-full rb-cardborder-rb-line p-4 rounded-xl text-left active:scale-[0.98] transition"
+                      >
+                        <p className="text-rb-text font-semibold mb-1">{driver.name}</p>
+                        <p className="text-rb-subtext text-sm">
+                          {driver.team} • ${driver.cost}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {pickerMode === 'f1' && pickerSlot === 'team' && (
+                  <div className="space-y-2">
+                    {F1_TEAMS.map(team => (
+                      <button 
+                        key={team.id} 
+                        onClick={() => selectPlayer(team.id)} 
+                        className="w-full rb-cardborder-rb-line p-4 rounded-xl text-left active:scale-[0.98] transition"
+                      >
+                        <p className="text-rb-text font-semibold mb-1">{team.name}</p>
+                        <p className="text-rb-subtext text-sm">${team.cost}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>;
 }
 // ============================================================================
@@ -1451,140 +1619,225 @@ function BoardsScreen() {
     const top20 = board.slice(0, 20);
     const userRank = board.findIndex(e => e.userId === userProfile.userId) + 1;
     const userEntry = board.find(e => e.userId === userProfile.userId);
-    return <div className="bg-[#192237] rounded-lg p-4 mb-4">
-        <h3 className="text-[#e50914] font-bold mb-3">{title}</h3>
-        {top20.length === 0 ? <p className="text-[#9ca3af] text-sm text-center py-4">
+    
+    return (
+      <div className="rb-card rounded-2xl shadow-cardborder-rb-line p-4 mb-4">
+        <h3 className="text-white font-semibold mb-3 text-xs uppercase tracking-wide break-words">{title}</h3>
+        {top20.length === 0 ? (
+          <p className="text-rb-subtext text-sm text-center py-4">
             No data available
-          </p> : <>
-            {top20.map((entry, index) => <div key={entry.userId} className={`flex items-center justify-between py-2 border-b border-[#2a3448] last:border-b-0 ${entry.userId === userProfile.userId ? 'bg-[#2a3448] px-2 rounded' : ''}`}>
+          </p>
+        ) : (
+          <>
+            {top20.map((entry, index) => (
+              <div 
+                key={entry.userId} 
+                className={`flex items-center justify-between py-3 border-b border-rb-line/60 last:border-b-0 ${
+                  entry.userId === userProfile.userId ? 'bg-white/5 -mx-2 px-4 rounded-lg' : ''
+                }`}
+              >
                 <div className="flex items-center gap-3">
-                  <span className="text-white font-bold w-6">{index + 1}</span>
+                  <span className={`font-semibold w-6 ${entry.userId === userProfile.userId ? 'text-rb-red' : 'text-rb-text'}`}>{index + 1}</span>
                   <div>
-                    <p className="text-white font-bold text-sm">{entry.name}</p>
-                    {showCountryFlag && <p className="text-[#9ca3af] text-xs">
-                        {COUNTRY_FLAGS[entry.country] || ''} {entry.country}
-                      </p>}
+                    <p className={`font-semibold text-sm ${entry.userId === userProfile.userId ? 'text-rb-red' : 'text-rb-text'}`}>{entry.name}</p>
+                    {showCountryFlag && (
+                      <p className="text-rb-muted text-xs">
+                        {COUNTRY_FLAGS[entry.country] || ''}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[#9ca3af] text-sm">
+                  <span className="text-rb-subtext text-sm">
                     {entry.points} pts
                   </span>
-                  {index < 3 && <span className="text-xl">
+                  {index < 3 && (
+                    <span className="text-xl">
                       {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
-                    </span>}
+                    </span>
+                  )}
                 </div>
-              </div>)}
-            {userEntry && userRank > 20 && <div className="flex items-center justify-between py-2 mt-2 bg-[#2a3448] px-2 rounded border-t-2 border-[#e50914]">
+              </div>
+            ))}
+            {userEntry && userRank > 20 && (
+              <div className="flex items-center justify-between py-3 mt-2 bg-white/5 px-4 rounded-lg border-t-2 border-rb-red">
                 <div className="flex items-center gap-3">
-                  <span className="text-white font-bold w-6">{userRank}</span>
+                  <span className="text-rb-red font-semibold w-6">{userRank}</span>
                   <div>
-                    <p className="text-white font-bold text-sm">
+                    <p className="text-rb-red font-semibold text-sm">
                       {userEntry.name}
                     </p>
-                    {showCountryFlag && <p className="text-[#9ca3af] text-xs">
-                        {COUNTRY_FLAGS[userEntry.country] || ''}{' '}
-                        {userEntry.country}
-                      </p>}
+                    {showCountryFlag && (
+                      <p className="text-rb-muted text-xs">
+                        {COUNTRY_FLAGS[userEntry.country] || ''}
+                      </p>
+                    )}
                   </div>
                 </div>
-                <span className="text-[#9ca3af] text-sm">
+                <span className="text-rb-subtext text-sm">
                   {userEntry.points} pts
                 </span>
-              </div>}
-          </>}
-      </div>;
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
   };
-  return <div className="bg-[#0b121f] min-h-screen pb-20">
-      <div className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold text-white">LEADERBOARDS</h1>
-          <button onClick={() => setShowSettings(!showSettings)} className="text-white text-xl">
-            ⚙
-          </button>
-        </div>
-        {showSettings && <div className="bg-[#192237] rounded-lg p-4 mb-4">
-            <h3 className="text-white font-bold mb-3">SETTINGS</h3>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-white">Demo Mode</span>
-              <button onClick={toggleDemoMode} className={`px-4 py-2 rounded ${state.demoMode ? 'bg-[#e50914] text-white' : 'bg-[#2a3448] text-[#9ca3af]'}`}>
-                {state.demoMode ? 'ON' : 'OFF'}
+  return <div className="min-h-screen fade-in">
+      <div className="container mx-auto max-w-[432px]">
+        <div className="p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-3xl font-semibold tracking-tight text-rb-text">LEADERBOARDS</h1>
+            <button 
+              onClick={() => setShowSettings(!showSettings)} 
+              className="text-rb-text text-xl w-10 h-10 flex items-center justify-center"
+            >
+              ⚙
+            </button>
+          </div>
+          
+          {showSettings && (
+            <div className="rb-card rounded-2xl shadow-cardborder-rb-line p-4 mb-4">
+              <h3 className="text-rb-text font-semibold mb-3">SETTINGS</h3>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-rb-text">Demo Mode</span>
+                <button 
+                  onClick={toggleDemoMode} 
+                  className={`px-4 h-10 rounded-full font-semibold ${
+                    state.demoMode ? 'bg-rb-red text-white' : 'bg-rb-pill text-rb-subtextborder-rb-line'
+                  }`}
+                >
+                  {state.demoMode ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              <button 
+                onClick={resetDemoData} 
+                className="h-12 px-5 rounded-full bg-rb-pill text-rb-text font-semiboldborder-rb-line w-full"
+              >
+                Reset Demo Data
               </button>
             </div>
-            <button onClick={resetDemoData} className="bg-[#2a3448] text-white px-4 py-2 rounded w-full">
-              Reset Demo Data
-            </button>
-          </div>}
-        <div className="flex gap-2 mb-4">
-          <button onClick={() => {
-          setSport('Football');
-          updateLeaderboardFilters({
-            sport: 'Football'
-          });
-        }} className={`flex-1 py-2 rounded font-bold ${sport === 'Football' ? 'bg-[#e50914] text-white' : 'bg-[#2a3448] text-[#9ca3af]'}`}>
-            Football
-          </button>
-          <button onClick={() => {
-          setSport('Formula 1');
-          updateLeaderboardFilters({
-            sport: 'Formula 1'
-          });
-        }} className={`flex-1 py-2 rounded font-bold ${sport === 'Formula 1' ? 'bg-[#e50914] text-white' : 'bg-[#2a3448] text-[#9ca3af]'}`}>
-            F1
-          </button>
+          )}
+          
+          {/* Filter Pills Container */}
+          <div className="rb-card rounded-2xlborder-rb-line p-3 mb-4">
+            <div className="flex gap-2 mb-3">
+              <button 
+                onClick={() => {
+                  setSport('Football');
+                  updateLeaderboardFilters({ sport: 'Football' });
+                }} 
+                className={`px-3 h-8 rounded-full text-sm font-semibold transition ${
+                  sport === 'Football' 
+                    ? 'bg-rb-red text-white' 
+                    : 'bg-rb-pill text-rb-textborder-rb-line'
+                }`}
+              >
+                Football
+              </button>
+              <button 
+                onClick={() => {
+                  setSport('Formula 1');
+                  updateLeaderboardFilters({ sport: 'Formula 1' });
+                }} 
+                className={`px-3 h-8 rounded-full text-sm font-semibold transition ${
+                  sport === 'Formula 1' 
+                    ? 'bg-rb-red text-white' 
+                    : 'bg-rb-pill text-rb-textborder-rb-line'
+                }`}
+              >
+                F1
+              </button>
+            </div>
+            
+            <div className="flex gap-2 mb-3">
+              <button 
+                onClick={() => {
+                  setTimeframe('Weekly');
+                  updateLeaderboardFilters({ timeframe: 'Weekly' });
+                }} 
+                className={`px-3 h-8 rounded-full text-sm font-semibold transition ${
+                  timeframe === 'Weekly' 
+                    ? 'bg-rb-red text-white' 
+                    : 'bg-rb-pill text-rb-textborder-rb-line'
+                }`}
+              >
+                Weekly
+              </button>
+              <button 
+                onClick={() => {
+                  setTimeframe('Monthly');
+                  updateLeaderboardFilters({ timeframe: 'Monthly' });
+                }} 
+                className={`px-3 h-8 rounded-full text-sm font-semibold transition ${
+                  timeframe === 'Monthly' 
+                    ? 'bg-rb-red text-white' 
+                    : 'bg-rb-pill text-rb-textborder-rb-line'
+                }`}
+              >
+                Monthly
+              </button>
+            </div>
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={() => {
+                  setScope('Country');
+                  updateLeaderboardFilters({ scope: 'Country' });
+                }} 
+                className={`px-3 h-8 rounded-full text-sm font-semibold transition ${
+                  scope === 'Country' 
+                    ? 'bg-rb-red text-white' 
+                    : 'bg-rb-pill text-rb-textborder-rb-line'
+                }`}
+              >
+                Country
+              </button>
+              <button 
+                onClick={() => {
+                  setScope('Global');
+                  updateLeaderboardFilters({ scope: 'Global' });
+                }} 
+                className={`px-3 h-8 rounded-full text-sm font-semibold transition ${
+                  scope === 'Global' 
+                    ? 'bg-rb-red text-white' 
+                    : 'bg-rb-pill text-rb-textborder-rb-line'
+                }`}
+              >
+                Global
+              </button>
+            </div>
+          </div>
+          
+          {scope === 'Country' && (
+            <div className="flex gap-2 mb-4 flex-wrap">
+              {COUNTRIES.map(country => (
+                <button 
+                  key={country} 
+                  onClick={() => {
+                    setSelectedCountry(country);
+                    updateUserCountry(country);
+                    updateLeaderboardFilters({ country });
+                  }} 
+                  className={`px-3 h-8 rounded-full text-sm font-semibold transition ${
+                    selectedCountry === country 
+                      ? 'bg-rb-red text-white' 
+                      : 'bg-rb-pill text-rb-textborder-rb-line'
+                  }`}
+                >
+                  {COUNTRY_FLAGS[country]} {country}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="flex gap-2 mb-4">
-          <button onClick={() => {
-          setTimeframe('Weekly');
-          updateLeaderboardFilters({
-            timeframe: 'Weekly'
-          });
-        }} className={`flex-1 py-2 rounded font-bold ${timeframe === 'Weekly' ? 'bg-[#e50914] text-white' : 'bg-[#2a3448] text-[#9ca3af]'}`}>
-            Weekly
-          </button>
-          <button onClick={() => {
-          setTimeframe('Monthly');
-          updateLeaderboardFilters({
-            timeframe: 'Monthly'
-          });
-        }} className={`flex-1 py-2 rounded font-bold ${timeframe === 'Monthly' ? 'bg-[#e50914] text-white' : 'bg-[#2a3448] text-[#9ca3af]'}`}>
-            Monthly
-          </button>
+        
+        <div className="px-4">
+          {timeframe === 'Weekly' && renderLeaderboard(`${sport} - Weekly (${weekId})`, weeklyBoard, scope === 'Global')}
+          {timeframe === 'Monthly' && renderLeaderboard(`${sport} - Monthly (${monthKey})`, monthlyBoard, scope === 'Global')}
+          {renderLeaderboard('Global Overall - Season', globalBoard, scope === 'Global')}
         </div>
-        <div className="flex gap-2 mb-4">
-          <button onClick={() => {
-          setScope('Country');
-          updateLeaderboardFilters({
-            scope: 'Country'
-          });
-        }} className={`flex-1 py-2 rounded font-bold ${scope === 'Country' ? 'bg-[#e50914] text-white' : 'bg-[#2a3448] text-[#9ca3af]'}`}>
-            Country
-          </button>
-          <button onClick={() => {
-          setScope('Global');
-          updateLeaderboardFilters({
-            scope: 'Global'
-          });
-        }} className={`flex-1 py-2 rounded font-bold ${scope === 'Global' ? 'bg-[#e50914] text-white' : 'bg-[#2a3448] text-[#9ca3af]'}`}>
-            Global
-          </button>
-        </div>
-        {scope === 'Country' && <div className="flex gap-2 mb-4 flex-wrap">
-            {COUNTRIES.map(country => <button key={country} onClick={() => {
-          setSelectedCountry(country);
-          updateUserCountry(country);
-          updateLeaderboardFilters({
-            country
-          });
-        }} className={`px-3 py-2 rounded ${selectedCountry === country ? 'bg-[#e50914] text-white' : 'bg-[#2a3448] text-white'}`}>
-                {COUNTRY_FLAGS[country]} {country}
-              </button>)}
-          </div>}
-      </div>
-      <div className="px-4">
-        {timeframe === 'Weekly' && renderLeaderboard(`${sport} - Weekly (${weekId})`, weeklyBoard, scope === 'Global')}
-        {timeframe === 'Monthly' && renderLeaderboard(`${sport} - Monthly (${monthKey})`, monthlyBoard, scope === 'Global')}
-        {renderLeaderboard('Global Overall - Season', globalBoard, scope === 'Global')}
       </div>
     </div>;
 }
@@ -1605,133 +1858,222 @@ function DevPanel() {
   // Only show in dev mode (check for localhost or dev flag)
   const isDev = window.location.hostname === 'localhost' || window.location.search.includes('dev=true');
   if (!isDev) return null;
-  return <div className="mx-4 mb-4">
-      <button onClick={() => setShowPanel(!showPanel)} className="bg-[#e50914] text-white px-4 py-2 rounded w-full font-bold">
+  
+  return (
+    <div className="mx-4 mb-4">
+      <button 
+        onClick={() => setShowPanel(!showPanel)} 
+        className="h-12 px-5 rounded-full bg-rb-red text-white font-semibold shadow-soft active:scale-[0.98] transition w-full"
+      >
         {showPanel ? 'Hide Dev Panel' : 'Show Dev Panel'}
       </button>
-      {showPanel && <div className="bg-[#192237] rounded-lg p-4 mt-2">
-          <h3 className="text-white font-bold mb-3">DEVELOPER PANEL</h3>
+      {showPanel && (
+        <div className="rb-card rounded-2xl shadow-cardborder-rb-line p-4 mt-3">
+          <h3 className="text-rb-text font-semibold mb-3 uppercase tracking-wide">DEVELOPER PANEL</h3>
           <div className="space-y-2">
-            <button onClick={simulateWeek} className="bg-[#2a3448] text-white px-4 py-2 rounded w-full">
+            <button 
+              onClick={simulateWeek} 
+              className="h-10 px-4 rounded-full bg-rb-pill text-rb-text font-semiboldborder-rb-line w-full active:scale-[0.98] transition"
+            >
               Simulate Week
             </button>
-            <button onClick={calculateFantasyPoints} className="bg-[#2a3448] text-white px-4 py-2 rounded w-full">
+            <button 
+              onClick={calculateFantasyPoints} 
+              className="h-10 px-4 rounded-full bg-rb-pill text-rb-text font-semiboldborder-rb-line w-full active:scale-[0.98] transition"
+            >
               Calculate Fantasy Points
             </button>
-            <button onClick={toggleDemoMode} className="bg-[#2a3448] text-white px-4 py-2 rounded w-full">
+            <button 
+              onClick={toggleDemoMode} 
+              className="h-10 px-4 rounded-full bg-rb-pill text-rb-text font-semibold border-rb-line w-full active:scale-[0.98] transition"
+            >
               Toggle Demo Mode
             </button>
-            <button onClick={resetDemoData} className="bg-[#2a3448] text-white px-4 py-2 rounded w-full">
+            <button 
+              onClick={resetDemoData} 
+              className="h-10 px-4 rounded-full bg-rb-pill text-rb-text font-semibold border-rb-line w-full active:scale-[0.98] transition"
+            >
               Reset Demo Data
             </button>
-            <div className="bg-[#0b121f] p-3 rounded mt-3">
-              <p className="text-[#9ca3af] text-xs mb-1">RNG Seed</p>
-              <p className="text-white text-sm font-mono">{state.rngSeed}</p>
+            <div className="bg-rb-navy p-3 rounded-xl mt-3 border-rb-line">
+              <p className="text-rb-muted text-xs mb-1">RNG Seed</p>
+              <p className="text-rb-text text-sm font-mono">{state.rngSeed}</p>
             </div>
-            {state.simulatedStats && <div className="bg-[#0b121f] p-3 rounded mt-2">
-                <p className="text-[#9ca3af] text-xs mb-1">Simulated</p>
-                <p className="text-white text-sm">
-                  Football: {state.simulatedStats.footballMatches.length}{' '}
-                  matches
+            {state.simulatedStats && (
+              <div className="bg-rb-navy p-3 rounded-xl mt-2 border-rb-line">
+                <p className="text-rb-muted text-xs mb-1">Simulated</p>
+                <p className="text-rb-text text-sm">
+                  Football: {state.simulatedStats.footballMatches.length} matches
                 </p>
-                <p className="text-white text-sm">
+                <p className="text-rb-text text-sm">
                   F1: {state.simulatedStats.f1Race ? 'Yes' : 'No'}
                 </p>
-              </div>}
+              </div>
+            )}
           </div>
-        </div>}
-    </div>;
+        </div>
+      )}
+    </div>
+  );
 }
 // --- Home Screen ---
 function HomeScreen() {
   const {
     state,
     userProfile,
-    updateUserCountry
+    updateUserCountry,
+    events
   } = useContext(AppContext);
   const navigate = useNavigate();
-  return <div className="bg-[#0b121f] min-h-screen">
-      <div className="p-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-white">WingFantasy</h1>
-      </div>
-      {/* Hero Banner */}
-      <div className="relative h-[400px] bg-[#192237]">
-        <div className="absolute inset-x-0 bottom-0 h-[200px] bg-gradient-to-t from-[#0b121f] via-[rgba(11,18,31,0.8)] to-transparent"></div>
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <h2 className="text-2xl font-bold text-white mb-2">
-            PREDICT. WIN. REPEAT.
-          </h2>
-          <p className="text-[#d1d5db] mb-6">
-            Test your knowledge of Red Bull sports
-          </p>
-          <button className="bg-[#e50914] text-white font-bold py-3 px-6 rounded" onClick={() => navigate('/events')}>
-            MAKE YOUR PICKS
-          </button>
+  const upcomingEvents = events.filter(e => e.startTime > Date.now()).slice(0, 3);
+  const [currentEventIndex, setCurrentEventIndex] = useState(0);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const scrollLeft = e.currentTarget.scrollLeft;
+    const cardWidth = e.currentTarget.offsetWidth;
+    const index = Math.round(scrollLeft / cardWidth);
+    setCurrentEventIndex(index);
+  };
+  
+  const currentEvent = upcomingEvents[currentEventIndex];
+  
+  return <div className="min-h-screen fade-in">
+      {/* Hero Carousel - Full width from top */}
+      <div className="relative mb-6">
+        <div 
+          ref={scrollContainerRef}
+          className="overflow-x-auto snap-x snap-mandatory scrollbar-hide" 
+          onScroll={handleScroll}
+          style={{ scrollSnapType: 'x mandatory' }}
+        >
+          <div className="flex">
+            {upcomingEvents.map((event) => (
+              <div 
+                key={event.id}
+                className="flex-shrink-0 w-full snap-center"
+                style={{ scrollSnapAlign: 'center' }}
+              >
+                <div
+                  className="relative h-[70vh] overflow-hidden cursor-pointer"
+                  onClick={() => navigate(`/pick/${event.id}`)}
+                  style={{
+                    backgroundImage: event.sport === 'Football' 
+                      ? 'url(/rb.png)' 
+                      : event.sport === 'Formula 1' 
+                      ? 'url(/F1.png)' 
+                      : 'none',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                  }}
+                >
+                  {/* Dark gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                  
+                  {/* Hero Content */}
+                  <div className="container mx-auto max-w-[432px] h-full relative">
+                    <div className="absolute bottom-10 left-0 right-0 p-6">
+                      <div className="-mt-32 mb-8">
+                        <h2 className="text-3xl font-semibold tracking-tight text-white mb-2">
+                          PREDICT. WIN. REPEAT.
+                        </h2>
+                        <p className="text-[13px] leading-6 text-white/80">
+                          Ready to put your Red Bull sports knowledge to the test?
+                          Tap to start and see how well you really know Red Bull teams, athletes, and their most iconic moments.  
+                        </p>
+                      </div>
+
+                       
+                      
+                      <div className="mb-1 mt-1 p-4">
+                        {/* Event Info */}
+                        <div className="mb-1 mt-2">
+                          <h4 className="flex justify-center text-xl font-semibold text-white mb-1">{event.title}</h4>
+                          <p className="flex justify-center text-sm text-white/70 mb-3">{event.sport} - {event.isLocked ? 'LOCKED' : `Starts in ${Math.floor((event.startTime - Date.now()) / (60 * 1000))} mins`}</p>
+                        </div>
+                        
+                        <div className="flex justify-center">
+                          <button 
+                            className="h-12 px-8 rounded-full bg-white text-black font-semibold shadow-soft active:scale-[0.98] transition"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/pick/${event.id}`);
+                            }}
+                          >
+                            Predict Now
+                          </button>
+                        </div>
+                        
+                        {/* Scroll indicator - only show if there are multiple events */}
+                        {upcomingEvents.length > 1 && (
+                          <div className="flex justify-center items-center gap-1 mt-2">
+                            <div className="flex gap-1.5">
+                              {upcomingEvents.map((_, index) => (
+                                <div 
+                                  key={index}
+                                  className={`h-2 rounded-full transition-all duration-300 ${
+                                    index === currentEventIndex 
+                                      ? 'bg-white w-6' 
+                                      : 'bg-white/40 w-2'
+                                  }`}
+                                ></div>
+                              ))}
+                            </div>
+                          </div>
+                        )}               </div>
+                     
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+        
+        {/* Fade transition overlay */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-rb-navy to-transparent pointer-events-none"></div>
       </div>
-      {/* Content Cards */}
-      <div className="p-4 space-y-4">
-        <div className="bg-[#192237] rounded-lg overflow-hidden">
-          <div className="p-3 border-b border-[#2a3448]">
-            <h3 className="text-sm font-bold text-[#e50914]">
-              UPCOMING EVENTS
+      
+      <div className="container mx-auto max-w-[432px] -mt-16">
+
+        {/* Passport Section */}
+        {state.passport.badge && (
+          <div className="mx-4 mb-4 rb-card rounded-2xl shadow-card p-4">
+            <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wide">
+              SEASON PASSPORT
             </h3>
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-rb-red rounded-full flex items-center justify-center mr-3">
+                <span className="text-xl">🏆</span>
+              </div>
+              <div>
+                <p className="text-rb-text font-semibold mb-1">Season Pass Unlocked!</p>
+                <p className="text-rb-subtext text-sm">
+                  Badge: {state.passport.badge}
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="p-3">
-            <p className="text-white font-bold mb-1">F1 Abu Dhabi GP</p>
-            <p className="text-[#9ca3af] text-sm">Starting soon</p>
-          </div>
-          <div className="p-3 bg-[#2a3448]">
-            <p className="text-xs font-bold text-white">PREDICT NOW</p>
-          </div>
-        </div>
-        <div className="bg-[#192237] rounded-lg overflow-hidden">
-          <div className="p-3 border-b border-[#2a3448]">
-            <h3 className="text-sm font-bold text-[#e50914]">LIVE RESULTS</h3>
-          </div>
-          <div className="p-3">
-            <p className="text-white font-bold mb-1">F1 Austin GP</p>
-            <p className="text-[#9ca3af] text-sm">See your results</p>
-          </div>
-          <div className="p-3 bg-[#2a3448]">
-            <p className="text-xs font-bold text-white">VIEW RESULTS</p>
-          </div>
-        </div>
-      </div>
-      {/* Passport Section */}
-      {state.passport.badge && <div className="m-4 p-4 bg-[#192237] rounded-lg">
-          <h3 className="text-sm font-bold text-[#e50914] mb-3">
-            SEASON PASSPORT
+        )}
+
+        {/* Streak Section */}
+        <div className="mx-2 mb-2 rounded-2xl p-4 text-center">
+          <h3 className="text-xs font-semibold text-white mb-2 uppercase tracking-wide">
+            CURRENT STREAK
           </h3>
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-[#e50914] rounded-full flex items-center justify-center mr-3">
-              <span className="text-xl">🏆</span>
-            </div>
-            <div>
-              <p className="text-white font-bold mb-1">Season Pass Unlocked!</p>
-              <p className="text-[#9ca3af] text-sm">
-                Badge: {state.passport.badge}
-              </p>
-            </div>
+          <div className="flex items-baseline justify-center mb-1">
+            <span className="text-2xl font-semibold text-rb-text mr-2">
+              {state.streakDays}
+            </span>
+            <span className="text-sm text-rb-text">DAYS</span>
           </div>
-        </div>}
-      {/* Streak Section */}
-      <div className="m-4 p-4 bg-[#192237] rounded-lg text-center">
-        <h3 className="text-sm font-bold text-[#e50914] mb-3">
-          CURRENT STREAK
-        </h3>
-        <div className="flex items-baseline justify-center mb-2">
-          <span className="text-3xl font-bold text-white mr-2">
-            {state.streakDays}
-          </span>
-          <span className="text-white">DAYS</span>
+          <p className="text-rb-subtext text-xs mb-1">
+            {state.streakDays >= 7 ? 'You earned a Wing Token!' : `${7 - state.streakDays} more days until you earn a Wing Token`}
+          </p>
+          <p className="text-white text-sm font-semibold">
+            Wing Tokens: {state.wingTokens}
+          </p>
         </div>
-        <p className="text-[#9ca3af] text-sm mb-2">
-          {state.streakDays >= 7 ? 'You earned a Wing Token!' : `${7 - state.streakDays} more days until you earn a Wing Token`}
-        </p>
-        <p className="text-[#e50914] font-bold">
-          Wing Tokens: {state.wingTokens}
-        </p>
       </div>
     </div>;
 }
@@ -1743,31 +2085,51 @@ function EventsScreen() {
   const navigate = useNavigate();
   const upcomingEvents = events.filter(event => event.startTime > Date.now());
   const pastEvents = events.filter(event => event.startTime <= Date.now());
-  const renderEventItem = (item: Event) => <div key={item.id} className="bg-[#192237] mx-4 mb-2 rounded-lg flex items-center p-4 cursor-pointer" onClick={() => navigate(`/pick/${item.id}`)}>
-      <div className="flex-1">
-        <h3 className="text-white font-bold mb-1">{item.title}</h3>
-        <p className="text-[#9ca3af] text-sm mb-1">{item.sport}</p>
-        <p className="text-[#e50914] text-xs">
-          {item.isLocked ? 'LOCKED' : `Starts in ${Math.floor((item.startTime - Date.now()) / (60 * 1000))} mins`}
-        </p>
+  
+  const renderEventItem = (item: Event) => {
+    const minsToStart = Math.floor((item.startTime - Date.now()) / (60 * 1000));
+    
+    return (
+      <div 
+        key={item.id} 
+        className="rb-card rounded-2xl shadow-card border-rb-line mx-4 mb-3 p-4 cursor-pointer active:scale-[0.98] transition flex items-center" 
+        onClick={() => navigate(`/pick/${item.id}`)}
+      >
+        <div className="flex-1">
+          <h3 className="text-base font-semibold text-rb-text mb-1">{item.title}</h3>
+          <p className="text-xs text-rb-muted mb-2">{item.sport}</p>
+          {item.isLocked ? (
+            <div className="inline-block px-3 h-8 rounded-full bg-rb-pill text-[#FF6464]border-rb-line text-sm flex items-center">
+              LOCKED
+            </div>
+          ) : (
+            <div className="inline-block px-3 h-8 rounded-full bg-rb-pill text-rb-text border-rb-line text-sm flex items-center">
+              Starts in {minsToStart}m
+            </div>
+          )}
+        </div>
+        <div className="ml-2">
+          <span className="text-2xl text-rb-muted">›</span>
+        </div>
       </div>
-      <div className="ml-2">
-        <span className="text-2xl text-[#9ca3af]">›</span>
-      </div>
-    </div>;
-  return <div className="bg-[#0b121f] min-h-screen">
-      <div className="p-4">
-        <h1 className="text-2xl font-bold text-white">EVENTS</h1>
-      </div>
-      <div className="mb-6">
-        <h2 className="text-[#e50914] font-bold text-base ml-4 mb-2">
-          UPCOMING
-        </h2>
-        <div>{upcomingEvents.map(renderEventItem)}</div>
-      </div>
-      <div className="mb-6">
-        <h2 className="text-[#e50914] font-bold text-base ml-4 mb-2">PAST</h2>
-        <div>{pastEvents.map(renderEventItem)}</div>
+    );
+  };
+  
+  return <div className="min-h-screen fade-in">
+      <div className="container mx-auto max-w-[432px]">
+        <div className="p-4">
+          <h1 className="text-3xl font-semibold tracking-tight text-rb-text">EVENTS</h1>
+        </div>
+        <div className="mb-6">
+          <h2 className="text-white font-semibold text-sm ml-4 mb-3 uppercase tracking-wide">
+            UPCOMING
+          </h2>
+          <div>{upcomingEvents.map(renderEventItem)}</div>
+        </div>
+        <div className="mb-6">
+          <h2 className="text-white font-semibold text-sm ml-4 mb-3 uppercase tracking-wide">PAST</h2>
+          <div>{pastEvents.map(renderEventItem)}</div>
+        </div>
       </div>
     </div>;
 }
@@ -1786,11 +2148,14 @@ function PickSheetScreen() {
     eventId: string;
   }>();
   const navigate = useNavigate();
+  
+  if (!eventId) return <div>Event not found</div>;
+  
   const event = events.find(e => e.id === eventId);
   if (!event) return <div>Event not found</div>;
   const userPick = state.picks.find(p => p.eventId === eventId);
-  const results = state.results[eventId || ''];
-  const points = state.points[eventId || ''];
+  const results = state.results[eventId];
+  const points = state.points[eventId];
   const renderPickOptions = (key: PickKeys) => {
     let options: PickOption[] = [];
     if (event.sport === 'Football') {
@@ -1809,48 +2174,94 @@ function PickSheetScreen() {
         options = ['Yes', 'No'];
       }
     }
-    return <div key={key} className="mb-4">
-        <h3 className="text-white font-bold text-base ml-4 mb-2">
-          {key === 'matchResult' ? 'Match Result' : key === 'firstScorer' ? 'First RB Scorer' : key === 'totalGoals' ? 'Total Goals' : key === 'raceWinner' ? 'Race Winner' : key === 'fastestLap' ? 'Fastest Lap' : key === 'safetyCar' ? 'Safety Car' : ''}
+    
+    const keyLabel = key === 'matchResult' ? 'Match Result' 
+      : key === 'firstScorer' ? 'First RB Scorer' 
+      : key === 'totalGoals' ? 'Total Goals' 
+      : key === 'raceWinner' ? 'Race Winner' 
+      : key === 'fastestLap' ? 'Fastest Lap' 
+      : key === 'safetyCar' ? 'Safety Car' 
+      : '';
+    
+    return (
+      <div key={key} className="mb-4">
+        <h3 className="text-base font-semibold text-rb-text ml-4 mb-3">
+          {keyLabel}
         </h3>
-        <div className="px-4 overflow-x-auto">
-          <div className="flex py-2 space-x-2">
-            {options.map(option => <button key={option} className={`px-4 py-2 rounded-full text-white text-sm whitespace-nowrap
-                  ${userPick?.picks[key] === option ? 'bg-[#e50914] font-bold' : 'bg-[#192237]'} 
-                  ${results && results[key] === option ? 'bg-[#10b981] font-bold' : ''}
-                  ${event.isLocked ? 'opacity-60' : ''}
-                `} onClick={() => !event.isLocked && makePick(eventId || '', key, option)} disabled={event.isLocked}>
+        <div className="px-4 overflow-x-auto -mx-4">
+          <div className="flex px-4 py-2 gap-2 snap-x snap-mandatory">
+            {options.map(option => (
+              <button 
+                key={option} 
+                className={`px-4 h-8 rounded-full text-sm whitespace-nowrap font-semibold transition snap-start
+                  ${userPick?.picks[key] === option 
+                    ? 'bg-rb-red text-white' 
+                    : 'bg-rb-pill text-rb-textborder-rb-line'
+                  } 
+                  ${results && results[key] === option ? 'bg-green-600 text-white' : ''}
+                  ${event.isLocked ? 'opacity-60' : 'active:scale-[0.98]'}
+                `} 
+                onClick={() => !event.isLocked && makePick(eventId, key, option)} 
+                disabled={event.isLocked}
+              >
                 {option}
-              </button>)}
+              </button>
+            ))}
           </div>
         </div>
-      </div>;
-  };
-  return <div className="bg-[#0b121f] min-h-screen">
-      <div className="p-4 bg-[#192237] mb-4 relative">
-        <button className="absolute top-4 left-4 text-white" onClick={() => navigate(-1)}>
-          ← Back
-        </button>
-        <h1 className="text-xl font-bold text-white text-center">
-          {event.title}
-        </h1>
-        <p className="text-[#9ca3af] text-center">{event.sport}</p>
-        {event.isLocked && <div className="absolute top-4 right-4 bg-[#e50914] px-2 py-1 rounded">
-            <span className="text-white text-xs font-bold">LOCKED</span>
-          </div>}
       </div>
-      <div className="mb-6">{event.pickKeys.map(renderPickOptions)}</div>
-      {points !== undefined && <div className="mx-4 p-4 bg-[#192237] rounded-lg mb-4 text-center">
-          <h3 className="text-[#e50914] font-bold text-base mb-2">RESULTS</h3>
-          <p className="text-white font-bold text-2xl">{points} POINTS</p>
-        </div>}
-      <div className="flex px-4 space-x-2 mb-6">
-        <button className="flex-1 bg-[#e50914] py-3 rounded text-white font-bold text-sm" onClick={() => revealResults(event)}>
-          REVEAL RESULTS
-        </button>
-        <button className="w-12 bg-[#2a3448] py-3 rounded text-white font-bold text-sm" onClick={() => simulateResults(event)}>
-          A
-        </button>
+    );
+  };
+  return <div className="min-h-screen fade-in">
+      <div className="container mx-auto max-w-[432px]">
+        {/* Hero Header */}
+        <div className="relative h-[300px] mb-4 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-rb-red/20 to-rb-navy"></div>
+          <div className="absolute inset-x-0 bottom-0 h-[150px] bg-gradient-to-t from-rb-navy via-rb-navy/80 to-transparent"></div>
+          <button 
+            className="absolute top-4 left-4 text-rb-text w-10 h-10 flex items-center justify-center" 
+            onClick={() => navigate(-1)}
+          >
+            ← Back
+          </button>
+          {event.isLocked && (
+            <div className="absolute top-4 right-4 px-3 h-8 rounded-full bg-rb-pill text-[#FF6464]border-rb-line text-sm flex items-center font-semibold">
+              LOCKED
+            </div>
+          )}
+          <div className="absolute bottom-0 left-0 right-0 p-6">
+            <h1 className="text-3xl font-semibold tracking-tight text-rb-text mb-2">
+              {event.title}
+            </h1>
+            <p className="text-[15px] leading-6 text-rb-subtext">{event.sport}</p>
+          </div>
+        </div>
+        
+        <div className="mb-6">{event.pickKeys.map(renderPickOptions)}</div>
+        
+        {points !== undefined && (
+          <div className="mx-4 p-5 rb-card rounded-2xl shadow-cardborder-rb-line mb-4 text-center">
+            <h3 className="text-white font-semibold text-sm mb-2 uppercase tracking-wide">RESULTS</h3>
+            <p className="text-rb-text font-semibold text-3xl">{points} POINTS</p>
+          </div>
+        )}
+        
+        <div className="flex px-4 gap-3 mb-6">
+          <button 
+            className="flex-1 h-12 px-4 rounded-full bg-rb-red text-white font-semibold shadow-soft active:scale-[0.98] transition" 
+            onClick={() => revealResults(event)}
+          >
+            {points !== undefined ? 'Reveal results' : 'Predict now'}
+          </button>
+          <button 
+            className="h-12 px-4 rounded-full bg-rb-pill text-rb-text font-semiboldborder-rb-line active:scale-[0.98] transition whitespace-nowrap" 
+            onClick={() => simulateResults(event)}
+            title="Simulate Results"
+            aria-label="Simulate Results"
+          >
+            Simulate
+          </button>
+        </div>
       </div>
     </div>;
 }
@@ -1866,98 +2277,188 @@ function LiveScreen() {
     const results = state.results[event.id];
     const points = state.points[event.id];
     if (!userPick) return null;
-    return <div className="bg-[#192237] mx-4 mb-4 rounded-lg overflow-hidden" key={event.id}>
-        <div className="p-4 border-b border-[#2a3448] flex justify-between items-center">
-          <h3 className="text-white font-bold">{event.title}</h3>
-          <span className="text-[#e50914] text-xs font-bold">
+    
+    return (
+      <div className="rb-card mx-4 mb-4 rounded-2xl shadow-cardborder-rb-line overflow-hidden" key={event.id}>
+        <div className="p-4 border-b border-rb-line flex justify-between items-center">
+          <h3 className="text-rb-text font-semibold">{event.title}</h3>
+          <span className="px-3 h-6 rounded-full bg-rb-red text-white text-xs font-semibold flex items-center">
             {Date.now() - event.startTime < 2 * 60 * 60 * 1000 ? 'LIVE' : 'COMPLETED'}
           </span>
         </div>
-        <div className="p-4 flex">
-          <div className="flex-1 mr-2">
-            <h4 className="text-[#9ca3af] text-sm font-bold mb-2">
+        <div className="p-4 flex gap-4">
+          <div className="flex-1">
+            <h4 className="text-rb-muted text-sm font-semibold mb-2 uppercase tracking-wide">
               YOUR PICKS
             </h4>
-            {Object.entries(userPick.picks).map(([key, value]) => <div className="mb-2" key={key}>
-                <p className="text-[#9ca3af] text-xs mb-0.5">
-                  {key === 'matchResult' ? 'Match Result' : key === 'firstScorer' ? 'First Scorer' : key === 'totalGoals' ? 'Total Goals' : key === 'raceWinner' ? 'Race Winner' : key === 'fastestLap' ? 'Fastest Lap' : key === 'safetyCar' ? 'Safety Car' : ''}
+            {Object.entries(userPick.picks).map(([key, value]) => (
+              <div className="mb-2" key={key}>
+                <p className="text-rb-muted text-xs mb-0.5">
+                  {key === 'matchResult' ? 'Match Result' 
+                    : key === 'firstScorer' ? 'First Scorer' 
+                    : key === 'totalGoals' ? 'Total Goals' 
+                    : key === 'raceWinner' ? 'Race Winner' 
+                    : key === 'fastestLap' ? 'Fastest Lap' 
+                    : key === 'safetyCar' ? 'Safety Car' 
+                    : ''}
                 </p>
-                <p className={`text-sm ${results && results[key as PickKeys] === value ? 'text-[#10b981] font-bold' : 'text-white'}`}>
+                <p className={`text-sm ${
+                  results && results[key as PickKeys] === value 
+                    ? 'text-green-500 font-semibold' 
+                    : 'text-rb-text'
+                }`}>
                   {value}
                 </p>
-              </div>)}
+              </div>
+            ))}
           </div>
-          {results && <div className="flex-1 ml-2">
-              <h4 className="text-[#9ca3af] text-sm font-bold mb-2">RESULTS</h4>
-              {Object.entries(results).map(([key, value]) => <div className="mb-2" key={key}>
-                  <p className="text-[#9ca3af] text-xs mb-0.5">
-                    {key === 'matchResult' ? 'Match Result' : key === 'firstScorer' ? 'First Scorer' : key === 'totalGoals' ? 'Total Goals' : key === 'raceWinner' ? 'Race Winner' : key === 'fastestLap' ? 'Fastest Lap' : key === 'safetyCar' ? 'Safety Car' : ''}
+          {results && (
+            <div className="flex-1">
+              <h4 className="text-rb-muted text-sm font-semibold mb-2 uppercase tracking-wide">RESULTS</h4>
+              {Object.entries(results).map(([key, value]) => (
+                <div className="mb-2" key={key}>
+                  <p className="text-rb-muted text-xs mb-0.5">
+                    {key === 'matchResult' ? 'Match Result' 
+                      : key === 'firstScorer' ? 'First Scorer' 
+                      : key === 'totalGoals' ? 'Total Goals' 
+                      : key === 'raceWinner' ? 'Race Winner' 
+                      : key === 'fastestLap' ? 'Fastest Lap' 
+                      : key === 'safetyCar' ? 'Safety Car' 
+                      : ''}
                   </p>
-                  <p className="text-white text-sm">{value}</p>
-                </div>)}
-            </div>}
+                  <p className="text-rb-text text-sm">{value}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        {points !== undefined && <div className="p-4 bg-[#2a3448] text-center">
-            <p className="text-white font-bold">{points} POINTS</p>
-          </div>}
-      </div>;
-  };
-  return <div className="bg-[#0b121f] min-h-screen">
-      <div className="p-4">
-        <h1 className="text-2xl font-bold text-white">LIVE RESULTS</h1>
-      </div>
-      {/* Passport Card */}
-      {state.passport.badge && <div className="bg-[#192237] mx-4 mb-4 rounded-lg overflow-hidden">
-          <div className="p-3 border-b border-[#2a3448]">
-            <h3 className="text-sm font-bold text-[#e50914]">
-              SEASON PASSPORT
-            </h3>
+        {points !== undefined && (
+          <div className="p-4 bg-rb-panel2 text-center border-t border-rb-line">
+            <p className="text-rb-text font-semibold">{points} POINTS</p>
           </div>
-          <div className="p-3">
-            <p className="text-white text-sm mb-2">
-              Badge: {state.passport.badge}
-            </p>
-            <div className="flex justify-between">
-              <p className="text-[#9ca3af] text-xs">
-                Watched: {state.passport.watched}/1
+        )}
+      </div>
+    );
+  };
+  return <div className="min-h-screen fade-in">
+      <div className="container mx-auto max-w-[432px]">
+        <div className="p-4">
+          <h1 className="text-3xl font-semibold tracking-tight text-rb-text">LIVE RESULTS</h1>
+        </div>
+        
+        {/* Passport Card */}
+        {state.passport.badge && (
+          <div className="rb-card mx-4 mb-4 rounded-2xl shadow-cardborder-rb-line overflow-hidden">
+            <div className="p-4 border-b border-rb-line">
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wide">
+                SEASON PASSPORT
+              </h3>
+            </div>
+            <div className="p-4">
+              <p className="text-rb-text text-sm mb-2">
+                Badge: {state.passport.badge}
               </p>
-              <p className="text-[#9ca3af] text-xs">
-                Predicted: {state.passport.predicted}/3
-              </p>
-              <p className="text-[#9ca3af] text-xs">
-                Created: {state.passport.created}/1
-              </p>
+              <div className="flex justify-between">
+                <p className="text-rb-subtext text-xs">
+                  Watched: {state.passport.watched}/1
+                </p>
+                <p className="text-rb-subtext text-xs">
+                  Predicted: {state.passport.predicted}/3
+                </p>
+                <p className="text-rb-subtext text-xs">
+                  Created: {state.passport.created}/1
+                </p>
+              </div>
             </div>
           </div>
-        </div>}
-      {liveEvents.length === 0 ? <div className="p-6 text-center">
-          <p className="text-[#9ca3af]">No live events at the moment</p>
-        </div> : liveEvents.map(renderLiveEvent)}
+        )}
+        
+        {liveEvents.length === 0 ? (
+          <div className="p-6 text-center">
+            <p className="text-rb-subtext">No live events at the moment</p>
+          </div>
+        ) : (
+          liveEvents.map(renderLiveEvent)
+        )}
+      </div>
     </div>;
 }
 // --- Search Screen ---
 function SearchScreen() {
   const navigate = useNavigate();
-  return <div className="bg-[#0b121f] min-h-screen">
-      <div className="p-4">
-        <h1 className="text-2xl font-bold text-white mb-4">SEARCH</h1>
-        <div className="bg-[#192237] rounded-lg p-3 mb-4">
-          <p className="text-[#6b7280]">Search for events...</p>
-        </div>
-      </div>
-      <div className="px-4 space-y-4">
-        <div className="bg-[#192237] rounded-lg h-30 cursor-pointer" onClick={() => navigate('/events')}>
-          <div className="p-4 flex flex-col justify-center h-full">
-            <h2 className="text-xl font-bold text-white mb-2">Football</h2>
-            <p className="text-[#9ca3af]">
-              RB Leipzig, Red Bull Salzburg, and more
-            </p>
+  
+  return <div className="min-h-screen fade-in">
+      <div className="container mx-auto max-w-[432px]">
+        <div className="p-4">
+          <h1 className="text-3xl font-semibold tracking-tight text-rb-text mb-4">SEARCH</h1>
+          <div className="rb-card rounded-2xlborder-rb-line p-4 mb-4">
+            <p className="text-rb-muted">Search for events...</p>
           </div>
         </div>
-        <div className="bg-[#192237] rounded-lg h-30 cursor-pointer" onClick={() => navigate('/events')}>
-          <div className="p-4 flex flex-col justify-center h-full">
-            <h2 className="text-xl font-bold text-white mb-2">Formula 1</h2>
-            <p className="text-[#9ca3af]">Red Bull Racing, Visa Cash App RB</p>
+        
+        <div className="px-4 grid grid-cols-2 gap-3">
+          <div 
+            className="rb-card rounded-2xl shadow-cardborder-rb-line h-40 cursor-pointer active:scale-[0.98] transition overflow-hidden" 
+            onClick={() => navigate('/events')}
+          >
+            <div 
+              className="h-24 bg-cover bg-center"
+              style={{ backgroundImage: 'url(/search/futebol.png)' }}
+            ></div>
+            <div className="p-3">
+              <h2 className="text-base font-semibold text-rb-text mb-1">Football</h2>
+              <p className="text-xs text-rb-muted">
+                RB Leipzig, Salzburg
+              </p>
+            </div>
+          </div>
+          
+          <div 
+            className="rb-card rounded-2xl shadow-cardborder-rb-line h-40 cursor-pointer active:scale-[0.98] transition overflow-hidden" 
+            onClick={() => navigate('/events')}
+          >
+            <div 
+              className="h-24 bg-cover bg-center"
+              style={{ backgroundImage: 'url(/search/formula1.jpg)' }}
+            ></div>
+            <div className="p-3">
+              <h2 className="text-base font-semibold text-rb-text mb-1">Formula 1</h2>
+              <p className="text-xs text-rb-muted">
+                Red Bull Racing
+              </p>
+            </div>
+          </div>
+          
+          <div 
+            className="rb-card rounded-2xl shadow-cardborder-rb-line h-40 cursor-pointer active:scale-[0.98] transition overflow-hidden" 
+            onClick={() => navigate('/events')}
+          >
+            <div 
+              className="h-24 bg-cover bg-center"
+              style={{ backgroundImage: 'url(/search/motor.jpeg)' }}
+            ></div>
+            <div className="p-3">
+              <h2 className="text-base font-semibold text-rb-text mb-1">Motor</h2>
+              <p className="text-xs text-rb-muted">
+                Racing events
+              </p>
+            </div>
+          </div>
+          
+          <div 
+            className="rb-card rounded-2xl shadow-cardborder-rb-line h-40 cursor-pointer active:scale-[0.98] transition overflow-hidden" 
+            onClick={() => navigate('/events')}
+          >
+            <div 
+              className="h-24 bg-cover bg-center"
+              style={{ backgroundImage: 'url(/search/surfing.png)' }}
+            ></div>
+            <div className="p-3">
+              <h2 className="text-base font-semibold text-rb-text mb-1">Surfing</h2>
+              <p className="text-xs text-rb-muted">
+                Extreme sports
+              </p>
+            </div>
           </div>
         </div>
       </div>
