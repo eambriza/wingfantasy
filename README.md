@@ -10,15 +10,43 @@ Lightweight, Red Bull only fantasy loop for Football and F1. Users make quick pi
 
 ## Features
 
-- Tabs: Home, Events, Live, Search.
-- Event detail with three quick markets per sport.
-- "A" button to simulate official results for demos.
-- Reveal results to compute points and persist locally.
-- Pick lock 15 minutes before start time.
-- Fantasy squad builder with salary cap mechanics.
-- Weekly slate simulation with player/driver stats.
-- Leaderboards (weekly, monthly, global season).
-- Red Bull themed glassmorphic UI with Tailwind CSS.
+### Core Functionality
+- **5 Main Tabs**: Home, Events, Fantasy, Boards, Search
+- **Event Predictions**: Make picks on 3 quick markets per sport (match result, first scorer, total goals for Football; race winner, fastest lap, safety car for F1)
+- **Pick Locking**: Picks automatically lock 15 minutes before event start time
+- **Simulate Button**: Generate random results for demo purposes on event detail pages
+- **Reveal Results**: Calculate and display points earned from your predictions
+
+### Fantasy Squad Builder
+- Build Football squad (FWD, MID, DEF, FLEX positions) with 40-point salary cap
+- Build F1 squad (2 drivers + 1 team) with 40-point salary cap
+- Captain selection with 1.5x points multiplier
+- Auto-Fill Squad feature for quick demo setup
+- Weekly slate system tracking upcoming matches and races
+
+### Leaderboards (Boards Tab)
+- **Filter by Sport**: Football or Formula 1
+- **Filter by Timeframe**: Weekly or Monthly
+- **Filter by Scope**: Country-specific or Global
+- **Country Selection**: US, AT, DE, BR, ZA with flag indicators
+- **Settings Panel**: Toggle Demo Mode and Reset Demo Data
+- Top 20 rankings displayed with medals for top 3
+- User's rank highlighted in red if outside top 20
+
+### Developer Tools
+- **Show Dev Panel**: Available on localhost or with `?dev=true` query parameter
+  - Simulate Week: Generate stats for all matches/races in current week
+  - Calculate Fantasy Points: Compute squad points and update leaderboards
+  - Toggle Demo Mode: Switch between demo and live data
+  - Reset Demo Data: Clear all stored data
+  - RNG Seed Display: Shows current random seed for reproducible simulations
+  - Simulation Status: Displays simulated match/race counts
+
+### UI/UX
+- Red Bull themed glassmorphic design with Tailwind CSS
+- Smooth transitions and animations
+- Mobile-first responsive layout
+- LocalStorage persistence for all user data
 
 ## Tech Stack
 
